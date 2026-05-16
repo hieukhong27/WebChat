@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zalo Clone - Đăng Nhập</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background: #0091ff; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
@@ -41,7 +42,11 @@
     </div>
 
 <script>
-    // ĐÃ XÓA dòng khởi tạo Socket.io gây lỗi ngắt kết nối ảo của trình duyệt
+    const socket = io("http://localhost:5000");
+    
+    socket.on('connect_error', () => {
+        document.getElementById("authStatusMsg").innerText = "Không thể kết nối tới máy chủ.";
+    });
 
     async function handleLogin() {
         const username = document.getElementById("authUsername").value.trim();
@@ -71,8 +76,7 @@
                 window.location.href = "index.html";
             }
         } catch (err) {
-            // Lỗi này chỉ xuất hiện khi bạn quên chưa chạy lệnh `node server.js` ở Terminal
-            statusBox.innerText = "Không thể kết nối tới máy chủ backend (Node.js).";
+            statusBox.innerText = "Không thể kết nối tới máy chủ.";
         }
     }
 </script>

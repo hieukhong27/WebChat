@@ -57,7 +57,7 @@
         }
 
         try {
-            const response = await fetch('http://localhost:5000/api/register', {
+            const response = await fetch('http://172.16.14.136:5000/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, username, password })
