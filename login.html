@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zalo Clone - Đăng Nhập</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #0091ff; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        .auth-card { width: 100%; max-width: 440px; background: #ffffff; padding: 40px 35px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); text-align: center; }
+        .auth-card h1 { font-size: 32px; color: #0068ff; font-weight: 700; margin-bottom: 6px; }
+        .auth-card p { font-size: 15px; color: #65676b; margin-bottom: 25px; }
+        .auth-card input { width: 100%; padding: 14px 16px; margin-bottom: 14px; border-radius: 8px; border: 1px solid #ced4da; font-size: 15px; background-color: #f0f2f5; transition: all 0.2s; }
+        .auth-card input:focus { border-color: #0084ff; background-color: #ffffff; outline: none; box-shadow: 0 0 0 2px #e7f3ff; }
+        .auth-card button { width: 100%; padding: 14px; border-radius: 8px; background: #0084ff; color: white; border: none; font-weight: 600; font-size: 16px; cursor: pointer; transition: background 0.2s; margin-bottom: 18px; }
+        .auth-card button:hover { background: #0068ff; }
+        .auth-toggle-text { font-size: 14px; color: #65676b; }
+        .auth-toggle-text a { color: #0084ff; font-weight: 600; text-decoration: none; }
+        .auth-toggle-text a:hover { text-decoration: underline; }
+        .auth-status-msg { margin-top: 15px; font-size: 13px; color: #f02849; min-height: 18px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <div class="auth-card">
+        <h1>Zalo Login</h1>
+        <p>Đăng nhập tài khoản hệ thống</p>
+        
+        <div style="text-align: left;">
+            <input type="text" id="authUsername" placeholder="Tên người dùng">
+            <input type="password" id="authPassword" placeholder="Mật khẩu">
+        </div>
+        
+        <button onclick="handleLogin()">Đăng nhập</button>
+        
+        <div class="auth-toggle-text">
+            Chưa có tài khoản? <a href="register.html">Đăng ký ngay</a>
+        </div>
+        
+        <div class="auth-status-msg" id="authStatusMsg"></div>
+    </div>
+
+<script>
+    // ĐÃ XÓA dòng khởi tạo Socket.io gây lỗi ngắt kết nối ảo của trình duyệt
+
+    async function handleLogin() {
+        const username = document.getElementById("authUsername").value.trim();
+        const password = document.getElementById("authPassword").value.trim();
+        const statusBox = document.getElementById("authStatusMsg");
+
+        statusBox.innerText = "";
+
+        if(!username || !password) {
+            return statusBox.innerText = "Vui lòng nhập tài khoản và mật khẩu!";
+        }
+
+        try {
+            const response = await fetch('http://localhost:5000/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await response.json();
+            
+            if (data.error) {
+                statusBox.innerText = data.error;
+            } else {
+                // Lưu dữ liệu đăng nhập vào localStorage của trình duyệt
+                localStorage.setItem("chat_current_user", JSON.stringify(data));
+                // Chuyển hướng sang trang chat chính
+                window.location.href = "index.html";
+            }
+        } catch (err) {
+            // Lỗi này chỉ xuất hiện khi bạn quên chưa chạy lệnh `node server.js` ở Terminal
+            statusBox.innerText = "Không thể kết nối tới máy chủ backend (Node.js).";
+        }
+    }
+</script>
+</body>
+</html>
