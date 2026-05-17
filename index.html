@@ -27,7 +27,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: var(--bg-app); display: flex; height: 100vh; overflow: hidden; color: var(--text-main); padding: 10px; }
 
-        /* Khung bao bọc toàn bộ ứng dụng tạo hiệu ứng nổi trên nền xanh như một ứng dụng desktop xịn */
         .app-container {
             display: flex;
             width: 100%;
@@ -40,7 +39,7 @@
 
         /* --- 1. THANH DOCK DỌC NGOÀI CÙNG TRÁI --- */
         .left-dock {
-            width: 70px; background: var(--bg-main-sky); /* Sử dụng đúng màu xanh của Login */
+            width: 70px; background: var(--bg-main-sky);
             display: flex; flex-direction: column; align-items: center; padding: 20px 0; justify-content: space-between;
         }
         .dock-top { display: flex; flex-direction: column; gap: 24px; align-items: center; width: 100%; }
@@ -63,7 +62,6 @@
         .filter-btn { background: #f0f2f5; color: var(--text-sub); border: none; padding: 6px 14px; border-radius: 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
         .filter-btn.active { background: var(--bg-main-sky); color: #ffffff; }
 
-        /* Danh sách hàng phòng chat */
         .list-container { flex: 1; overflow-y: auto; padding: 8px; }
         .item-row { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-standard); cursor: pointer; margin-bottom: 4px; transition: 0.2s; }
         .item-row:hover { background: var(--bg-hover); }
@@ -76,7 +74,6 @@
         .item-name { font-weight: 600; font-size: 15px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .item-preview { font-size: 13px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* Khung Panel phụ tạo phòng / Bạn bè */
         .tab-panel-content { display: none; flex-direction: column; flex: 1; overflow: hidden; }
         .tab-panel-content.active-panel { display: flex; }
         .card-panel { background: #f8fafc; padding: 12px; border-radius: var(--radius-standard); margin: 10px 16px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-color); }
@@ -85,7 +82,7 @@
         .btn-action-primary { background: var(--bg-main-sky); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-action-primary:hover { background: #006bce; }
 
-        /* --- 3. KHUNG KHÔNG GIAN CHAT CHÍNH (BÊN PHẢI) --- */
+        /* --- 3. KHUNG KHÔNG GIAN CHAT CHÍNH --- */
         .main-chat { flex: 1; background: #ffffff; display: flex; flex-direction: column; height: 100%; position: relative; }
         .chat-header { padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #ffffff; }
         .header-info-user { display: flex; align-items: center; gap: 12px; }
@@ -96,10 +93,8 @@
         .icon-call-btn { background: none; border: none; color: var(--bg-main-sky); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; transition: 0.2s; }
         .icon-call-btn:hover { background: var(--bg-hover); }
 
-        /* Vùng hiển thị bong bóng chat dạng sáng mềm mại */
         .screen-chat { flex: 1; background-color: #f9fafb; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
         
-        /* Cấu trúc bong bóng tin nhắn chuẩn mẫu Messenger/Zalo */
         .msg-row { display: flex; align-items: flex-end; gap: 8px; max-width: 65%; }
         .msg-row.msg-left { align-self: flex-start; }
         .msg-row.msg-right { align-self: flex-end; flex-direction: row-reverse; }
@@ -111,18 +106,15 @@
 
         .msg-sender { font-size: 11px; color: var(--text-sub); margin-left: 4px; }
         
-        /* Bong bóng văn bản mềm mại */
         .msg-bubble { padding: 10px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; word-wrap: break-word; }
         .msg-left .msg-bubble { background: var(--bg-bubble-left); color: var(--text-main); border-bottom-left-radius: 4px; }
         .msg-right .msg-bubble { background: var(--bg-main-sky); color: #ffffff; border-bottom-right-radius: 4px; }
 
-        /* Khối hiển thị ảnh/video bo góc tròn nguyên khối tinh tế giống ảnh mẫu */
         .msg-media-attachment { max-width: 300px; border-radius: 14px; overflow: hidden; margin-top: 4px; border: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .msg-media-attachment img, .msg-media-attachment video { width: 100%; display: block; object-fit: cover; }
 
         .msg-time { font-size: 10px; color: var(--text-sub); margin-top: 2px; padding: 0 4px; }
 
-        /* Chân trang nhập liệu */
         .chat-footer { padding: 16px 20px; background: #ffffff; border-top: 1px solid var(--border-color); }
         .input-group { display: flex; gap: 16px; align-items: center; }
         .chat-addon-icons { font-size: 20px; color: var(--bg-main-sky); cursor: pointer; display: flex; gap: 14px; opacity: 0.8; }
@@ -134,7 +126,6 @@
         
         .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; color: var(--text-sub); background: #f9fafb; font-size: 15px; }
 
-        /* LỚP PHỦ CUỘC GỌI WEBRTC TRẮNG ĐỤC SANG TRỌNG */
         .call-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.96); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 999; }
         .video-container { display: flex; gap: 20px; margin-bottom: 30px; width: 90%; justify-content: center; }
         video { width: 45%; max-width: 440px; height: 320px; background: #e0e6ed; border-radius: 16px; object-fit: cover; border: 3px solid #ffffff; box-shadow: var(--shadow-standard); }
@@ -261,12 +252,14 @@
 
 <script>
     const localData = localStorage.getItem("chat_current_user");
-    if (!localData) window.location.href = "login.html";
+    // ĐÃ SỬA: Chuyển hướng về router '/' của Vercel thay vì login.html cục bộ
+    if (!localData) window.location.href = "/";
     const currentUser = JSON.parse(localData);
     
     document.getElementById("userAvatarIcon").innerText = currentUser.name.charAt(0).toUpperCase();
 
-    const socket = io("http://172.16.14.136:5000");
+    // ĐÃ SỬA: Để trống io() để kết nối tự động đồng bộ theo tên miền đám mây Vercel thực tế
+    const socket = io();
     let currentRoomId = null;
 
     let localStream = null;
@@ -276,7 +269,8 @@
 
     socket.emit('join_room', { userId: currentUser.id, roomId: "" });
 
-    function handleLogout() { localStorage.removeItem("chat_current_user"); window.location.href = "login.html"; }
+    // ĐÃ SỬA: Chuyển hướng logout tương thích Vercel Router
+    function handleLogout() { localStorage.removeItem("chat_current_user"); window.location.href = "/"; }
     
     function handleSwitchMainTab(type) {
         document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
@@ -427,7 +421,13 @@
         const checkboxes = document.querySelectorAll('.user-cb:checked');
         let members = []; checkboxes.forEach(cb => members.push(cb.value));
         if(members.length === 0) return alert("Vui lòng chọn thành viên!");
-        await fetch('http://localhost:5000/api/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ roomName, type, creatorId: currentUser.id, members }) });
+        
+        // ĐÃ SỬA: Thay thế IP tĩnh sang đường dẫn tương đối để gọi API nội bộ Vercel
+        await fetch('/api/rooms', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ roomName, type, creatorId: currentUser.id, members }) 
+        });
         document.getElementById("roomNameInput").value = ""; checkboxes.forEach(cb => cb.checked = false);
     }
 
