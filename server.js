@@ -3,17 +3,27 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const path = require('path'); 
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 📁 CHUẨN HÓA VERCEL: Phục vụ file giao diện tĩnh trực tiếp từ thư mục gốc đám mây
+app.use(express.static(__dirname));
+
+// 🎯 CHUẨN HÓA VERCEL: Định tuyến mặc định gửi file login.html khi người dùng truy cập link tên miền .vercel.app
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login.html'));
+});
+
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-const MONGO_URI = "mongodb://127.0.0.1:27017/zalo_clone_db"; 
+// 🍃 CHUẨN HÓA DATABASE: Kết nối cụm MongoDB Atlas (Đọc trực tiếp từ Environment Variables bảo mật của Vercel)
+const MONGO_URI = process.env.MONGODB_URI || "mongodb+srv://hieuhieu27306_db_user:AcQJoWR8rUViXVk@webchat.ivx7oic.mongodb.net/zalo_clone_db?retryWrites=true&w=majority&appName=WebChat"; 
 mongoose.connect(MONGO_URI)
-    .then(() => console.log("🍃 Đã kết nối MongoDB thành công!"))
+    .then(() => console.log("🍃 Đã kết nối MongoDB Atlas thành công!"))
     .catch(err => console.error("❌ Lỗi kết nối MongoDB:", err));
 
 // ==========================================
@@ -161,7 +171,6 @@ io.on('connection', async (socket) => {
         }
     });
 
-    // --- SỰ KIỆN KẾT BẠN ---
     socket.on('send_friend_request', async ({ senderId, targetUsername }) => {
         try {
             const targetUser = await User.findOne({ username: targetUsername });
@@ -217,7 +226,6 @@ io.on('connection', async (socket) => {
         }
     });
 
-    // --- TIN NHẮN CHAT ---
     socket.on('send_message', async ({ roomId, messageText }) => {
         try {
             const room = await Room.findById(roomId);
@@ -242,41 +250,34 @@ io.on('connection', async (socket) => {
         }
     });
 
-    // =======================================================
-    // BIỂU DIỄN LOGIC TRUYỀN TÍN HIỆU CUỘC GỌI (WEBRTC SIGNALING)
-    // =======================================================
-
-    // 1. Khi User A nhấn nút Bắt đầu gọi thoại / gọi video
     socket.on('call_user', ({ targetRoomId, signalData, isVideo }) => {
-        // Gửi tín hiệu thông báo cuộc gọi đến cho tất cả các thành viên đang ở trong phòng (ngoại trừ người gọi)
         socket.to(targetRoomId).emit('incoming_call', {
             fromRoomId: targetRoomId,
             fromUserId: socket.userId,
-            signalData: signalData, // Mã hóa Offer cấu hình WebRTC từ máy A
+            signalData: signalData, 
             isVideo: isVideo
         });
     });
 
-    // 2. Khi User B bấm nút "Chấp nhận cuộc gọi"
     socket.on('accept_call', ({ targetRoomId, signalData }) => {
-        // Gửi lại mã hóa Answer phản hồi của máy B về cho máy A
         socket.to(targetRoomId).emit('call_accepted', { signalData });
     });
 
-    // 3. Khi User B bấm nút "Từ chối cuộc gọi"
     socket.on('reject_call', ({ targetRoomId }) => {
         socket.to(targetRoomId).emit('call_rejected');
     });
 
-    // 4. Liên tục trao đổi địa chỉ IP và cấu hình mạng (ICE Candidate) giữa 2 máy để thông luồng P2P
     socket.on('ice_candidate', ({ targetRoomId, candidate }) => {
         socket.to(targetRoomId).emit('ice_candidate', { candidate });
     });
 
-    // 5. Khi một trong hai bên ấn nút "Cúp máy" (End Call)
     socket.on('end_call', ({ targetRoomId }) => {
         socket.to(targetRoomId).emit('call_ended');
     });
 });
 
-server.listen(5000, () => console.log("🚀 Server Zalo Full (Chat, Bạn bè, Call Video) chạy tại cổng 5000"));
+// 🌐 CỔNG CHẠY LINH HOẠT: Tự động lấy biến PORT của hệ thống đám mây Vercel cấp phát
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+    console.log(`🚀 Server Zalo đang vận hành ổn định tại cổng: ${PORT}`);
+});
