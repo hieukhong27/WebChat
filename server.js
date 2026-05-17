@@ -12,9 +12,23 @@ app.use(express.json());
 // 📁 CHUẨN HÓA VERCEL: Phục vụ file giao diện tĩnh trực tiếp từ thư mục gốc đám mây
 app.use(express.static(__dirname));
 
-// 🎯 CHUẨN HÓA VERCEL: Định tuyến mặc định gửi file login.html khi người dùng truy cập link tên miền .vercel.app
+// ==========================================
+// CẤU HÌNH ĐỊNH TUYẾN GIAO DIỆN CHUYỂN TRANG (ROUTING)
+// ==========================================
+
+// 1. Trang chủ mặc định -> Trả về giao diện Đăng nhập
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+// 2. Đường dẫn /register -> Trả về giao diện Đăng ký
+app.get('/register', (req, res) => {
+    res.sendFile(path.join(__dirname, 'register.html'));
+});
+
+// 3. Đường dẫn /index -> Trả về giao diện Chat chính
+app.get('/index', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 const server = http.createServer(app);
