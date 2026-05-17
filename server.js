@@ -326,10 +326,12 @@ io.on('connection', async (socket) => {
     });
 });
 
-// ĐỂ TƯƠNG THÍCH VỚI VERCEL SERVERLESS HÃY THÊM DÒNG NÀY:
-module.exports = server;
-
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-    console.log(`🚀 Server đang chạy tại cổng: ${PORT}`);
-});
+
+if (!process.env.VERCEL) {
+    server.listen(PORT, () => {
+        console.log(`🚀 Server đang chạy tại cổng: ${PORT}`);
+    });
+}
+
+module.exports = app;
