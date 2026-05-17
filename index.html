@@ -252,29 +252,31 @@
 
 <script>
     const localData = localStorage.getItem("chat_current_user");
-    // ĐÃ SỬA: Chuyển hướng về router '/' của Vercel thay vì login.html cục bộ
     if (!localData) window.location.href = "/";
     const currentUser = JSON.parse(localData);
     
     document.getElementById("userAvatarIcon").innerText = currentUser.name.charAt(0).toUpperCase();
 
-    // ĐÃ SỬA: Để trống io() để kết nối tự động đồng bộ theo tên miền đám mây Vercel thực tế
     const socket = io();
     let currentRoomId = null;
+    let activeTab = 'chat'; // Biến kiểm soát trạng thái tab hiện tại: 'chat' hoặc 'friend'
 
     let localStream = null;
     let peerConnection = null;
     let incomingCallData = null;
     const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-    socket.emit('join_room', { userId: currentUser.id, roomId: "" });
+    // SỬA: Không gửi join_room rỗng ngay lập tức để tránh lỗi đồng bộ dữ liệu rác
+    socket.emit('init_user', { userId: currentUser.id }); 
 
-    // ĐÃ SỬA: Chuyển hướng logout tương thích Vercel Router
     function handleLogout() { localStorage.removeItem("chat_current_user"); window.location.href = "/"; }
     
+    // SỬA CHÍNH: Hàm chuyển Tab tường minh, cập nhật biến trạng thái `activeTab`
     function handleSwitchMainTab(type) {
+        activeTab = type;
         document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-panel-content').forEach(p => p.classList.remove('active-panel'));
+        
         if(type === 'chat') {
             document.getElementById('dockChatTab').classList.add('active');
             document.getElementById('panelChat').classList.add('active-panel');
@@ -394,6 +396,7 @@
         const a = document.getElementById("friendActionAlert"); a.style.color = "#42b72a"; a.innerText = msg;
     });
 
+    // SỬA: Khi render danh sách bạn bè, tuyệt đối giữ nguyên trạng thái hiển thị của Tab hiện tại thông qua `activeTab`
     socket.on('update_friend_data', ({ friends, requests }) => {
         document.getElementById("friendCount").innerText = friends.length;
         document.getElementById("reqCount").innerText = requests.length;
@@ -413,6 +416,9 @@
         friends.forEach(f => {
             fBox.innerHTML += `<div class="item-row"><div class="item-avatar online">${f.name.charAt(0).toUpperCase()}</div><div class="item-details"><div class="item-name">${f.name}</div></div></div>`;
         });
+
+        // Ép giữ nguyên hiển thị tab hiện hành, tránh sự cố server đè client
+        handleSwitchMainTab(activeTab); 
     });
 
     async function createNewRoom() {
@@ -422,7 +428,6 @@
         let members = []; checkboxes.forEach(cb => members.push(cb.value));
         if(members.length === 0) return alert("Vui lòng chọn thành viên!");
         
-        // ĐÃ SỬA: Thay thế IP tĩnh sang đường dẫn tương đối để gọi API nội bộ Vercel
         await fetch('/api/rooms', { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
@@ -439,7 +444,8 @@
         document.getElementById("chatHeaderAvatar").innerText = roomName.charAt(0).toUpperCase();
         
         document.querySelectorAll('.room-item').forEach(el => el.classList.remove('active-room'));
-        document.getElementById(roomId).classList.add('active-room');
+        const activeEl = document.getElementById(roomId);
+        if(activeEl) activeEl.classList.add('active-room');
         socket.emit('join_room', { userId: currentUser.id, roomId });
     }
 
@@ -457,6 +463,7 @@
         users.forEach(u => { if(u.id !== currentUser.id) box.innerHTML += `<label style="display:flex; align-items:center; gap:6px; margin:2px 0;"><input type='checkbox' class='user-cb' value='${u.id}'> ${u.name}</label>`; });
     });
 
+    // SỬA: Khi server cập nhật danh sách phòng, giữ nguyên trạng thái chọn phòng và không được làm mất Tab hiển thị hiện tại.
     socket.on('update_room_list', (rooms) => {
         const box = document.getElementById("roomList"); box.innerHTML = "";
         rooms.forEach(r => {
@@ -465,9 +472,14 @@
                     <div class="item-avatar" style="background:#e2e8f0; color:#475569;">${r.name.charAt(0).toUpperCase()}</div>
                     <div class="item-details"><div class="item-name">${r.name}</div><div class="item-preview">Bấm để trò chuyện</div></div>
                 </div>`;
-                if(currentRoomId === r.id) document.getElementById(r.id).classList.add('active-room');
+                if(currentRoomId === r.id) {
+                    const el = document.getElementById(r.id);
+                    if(el) el.classList.add('active-room');
+                }
             }
         });
+        // Ép giữ nguyên hiển thị tab hiện hành
+        handleSwitchMainTab(activeTab);
     });
 
     socket.on('receive_message', (data) => {
