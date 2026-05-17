@@ -12,16 +12,16 @@
         :root {
             --bg-main-sky: #0084ff;      /* Màu xanh dương nền của login.html */
             --bg-app: #f4f7f9;           /* Nền xám nhạt dịu mắt cho toàn bộ app */
-            --bg-card: #ffffff;          /* Nền trắng tinh khôi của các khung (như form login) */
+            --bg-card: #ffffff;          /* Nền trắng tinh khôi của các khung */
             --bg-hover: #eaf3fc;         /* Màu xanh nhẹ khi di chuột qua */
             --bg-active: #d2e6f9;        /* Màu khi kích hoạt mục */
             --bg-bubble-left: #f0f2f5;   /* Bong bóng chat người khác: Xám sáng */
-            --bg-bubble-right: #e7f3ff;  /* Bong bóng chat mình gửi: Xanh nhạt viền chữ xanh */
-            --text-main: #333333;        /* Chữ chính màu tối để dễ đọc trên nền trắng */
+            --bg-bubble-right: #e7f3ff;  /* Bong bóng chat mình gửi */
+            --text-main: #333333;        /* Chữ chính màu tối */
             --text-sub: #757575;         /* Chữ phụ màu xám */
             --border-color: #e0e0e0;     /* Đường kẻ phân cách mảnh */
-            --radius-standard: 12px;     /* Bo góc chuẩn giống form đăng nhập */
-            --shadow-standard: 0 4px 20px rgba(0, 0, 0, 0.08); /* Đổ bóng nhẹ sang trọng */
+            --radius-standard: 12px;     /* Bo góc chuẩn */
+            --shadow-standard: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -259,19 +259,19 @@
 
     const socket = io();
     let currentRoomId = null;
-    let activeTab = 'chat'; // Biến kiểm soát trạng thái tab hiện tại: 'chat' hoặc 'friend'
+    let activeTab = 'chat'; 
 
     let localStream = null;
     let peerConnection = null;
     let incomingCallData = null;
     const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-    // SỬA: Không gửi join_room rỗng ngay lập tức để tránh lỗi đồng bộ dữ liệu rác
+    // Khởi tạo thông tin người dùng ngay sau khi kết nối thành công
     socket.emit('init_user', { userId: currentUser.id }); 
 
     function handleLogout() { localStorage.removeItem("chat_current_user"); window.location.href = "/"; }
     
-    // SỬA CHÍNH: Hàm chuyển Tab tường minh, cập nhật biến trạng thái `activeTab`
+    // Hàm chuyển đổi tab giao diện trực tiếp dựa theo thao tác người dùng click
     function handleSwitchMainTab(type) {
         activeTab = type;
         document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
@@ -396,7 +396,7 @@
         const a = document.getElementById("friendActionAlert"); a.style.color = "#42b72a"; a.innerText = msg;
     });
 
-    // SỬA: Khi render danh sách bạn bè, tuyệt đối giữ nguyên trạng thái hiển thị của Tab hiện tại thông qua `activeTab`
+    // TỐI ƯU: Đổ dữ liệu tĩnh vào danh bạ mà không ép render lại thanh dock
     socket.on('update_friend_data', ({ friends, requests }) => {
         document.getElementById("friendCount").innerText = friends.length;
         document.getElementById("reqCount").innerText = requests.length;
@@ -416,9 +416,6 @@
         friends.forEach(f => {
             fBox.innerHTML += `<div class="item-row"><div class="item-avatar online">${f.name.charAt(0).toUpperCase()}</div><div class="item-details"><div class="item-name">${f.name}</div></div></div>`;
         });
-
-        // Ép giữ nguyên hiển thị tab hiện hành, tránh sự cố server đè client
-        handleSwitchMainTab(activeTab); 
     });
 
     async function createNewRoom() {
@@ -463,7 +460,7 @@
         users.forEach(u => { if(u.id !== currentUser.id) box.innerHTML += `<label style="display:flex; align-items:center; gap:6px; margin:2px 0;"><input type='checkbox' class='user-cb' value='${u.id}'> ${u.name}</label>`; });
     });
 
-    // SỬA: Khi server cập nhật danh sách phòng, giữ nguyên trạng thái chọn phòng và không được làm mất Tab hiển thị hiện tại.
+    // TỐI ƯU: Đổ danh sách phòng hoàn toàn độc lập, giữ nguyên class active-room nếu đang chọn
     socket.on('update_room_list', (rooms) => {
         const box = document.getElementById("roomList"); box.innerHTML = "";
         rooms.forEach(r => {
@@ -478,8 +475,6 @@
                 }
             }
         });
-        // Ép giữ nguyên hiển thị tab hiện hành
-        handleSwitchMainTab(activeTab);
     });
 
     socket.on('receive_message', (data) => {
