@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zalo Clone</title>
+    <title>Zalo Clone - Giao Diện Sáng Đồng Bộ Login</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         /* =======================================================
@@ -69,7 +69,7 @@
         .item-row:hover { background: var(--bg-hover); }
         .item-row.active-room { background: var(--bg-active); }
         
-        .item-avatar { width: 48px; height: 48px; background: #ccd7e0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; color: #4f6375; position: relative; flex-shrink: 0; }
+        .item-avatar { width: 48px; height: 48px; background: #ccd7e0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; color: #4f6375; position: relative; }
         .item-avatar.online::after { content: ""; position: absolute; width: 12px; height: 12px; background: #42b72a; border: 2px solid #ffffff; border-radius: 50%; right: 2px; bottom: 2px; }
         
         .item-details { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
@@ -79,7 +79,7 @@
         /* Khung Panel phụ tạo phòng / Bạn bè */
         .tab-panel-content { display: none; flex-direction: column; flex: 1; overflow: hidden; }
         .tab-panel-content.active-panel { display: flex; }
-        .card-panel { background: #f8fafc; padding: 12px; border-radius: var(--radius-standard); margin: 10px 16px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-color); flex-shrink: 0; }
+        .card-panel { background: #f8fafc; padding: 12px; border-radius: var(--radius-standard); margin: 10px 16px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-color); }
         .card-panel h4 { font-size: 11px; text-transform: uppercase; color: var(--text-sub); letter-spacing: 0.5px; }
         .card-panel input, .card-panel select { background: #ffffff; border: 1px solid var(--border-color); padding: 8px; border-radius: 6px; outline: none; font-size: 13px; }
         .btn-action-primary { background: var(--bg-main-sky); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
@@ -266,7 +266,7 @@
     
     document.getElementById("userAvatarIcon").innerText = currentUser.name.charAt(0).toUpperCase();
 
-    const socket = io();
+    const socket = io("http://172.16.14.136:5000");
     let currentRoomId = null;
 
     let localStream = null;
@@ -274,17 +274,13 @@
     let incomingCallData = null;
     const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-    // --- KHỞI TẠO ĐỒNG BỘ BAN ĐẦU ---
-    // Đăng ký định danh Client với server ngay khi kết nối thành công để nhận danh sách phòng/bạn bè
-    socket.on('connect', () => {
-        socket.emit('register_user', { userId: currentUser.id });
-    });
+    socket.emit('join_room', { userId: currentUser.id, roomId: "" });
 
     function handleLogout() { localStorage.removeItem("chat_current_user"); window.location.href = "login.html"; }
     
     function handleSwitchMainTab(type) {
-        document.querySelectorAll('.left-dock .dock-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.sidebar .tab-panel-content').forEach(p => p.classList.remove('active-panel'));
+        document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel-content').forEach(p => p.classList.remove('active-panel'));
         if(type === 'chat') {
             document.getElementById('dockChatTab').classList.add('active');
             document.getElementById('panelChat').classList.add('active-panel');
@@ -405,28 +401,24 @@
     });
 
     socket.on('update_friend_data', ({ friends, requests }) => {
-        document.getElementById("friendCount").innerText = friends ? friends.length : 0;
-        document.getElementById("reqCount").innerText = requests ? requests.length : 0;
+        document.getElementById("friendCount").innerText = friends.length;
+        document.getElementById("reqCount").innerText = requests.length;
         
         const reqBox = document.getElementById("friendRequestList");
-        reqBox.innerHTML = (!requests || requests.length === 0) ? '<p style="font-size:12px; color:var(--text-sub); padding:10px;">Không có lời mời</p>' : '';
-        if(requests) {
-            requests.forEach(r => {
-                reqBox.innerHTML += `<div class="item-row" style="background:#f8fafc;">
-                    <div class="item-avatar">${r.name.charAt(0).toUpperCase()}</div>
-                    <div class="item-details"><div class="item-name">${r.name}</div></div>
-                    <button onclick="socket.emit('accept_friend_request',{userId:currentUser.id,requesterId:'${r.id}'})" style="background:var(--bg-main-sky); color:white; border:none; padding:6px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">Đồng ý</button>
-                </div>`;
-            });
-        }
+        reqBox.innerHTML = requests.length === 0 ? '<p style="font-size:12px; color:var(--text-sub); padding:10px;">Không có lời mời</p>' : '';
+        requests.forEach(r => {
+            reqBox.innerHTML += `<div class="item-row" style="background:#f8fafc;">
+                <div class="item-avatar">${r.name.charAt(0).toUpperCase()}</div>
+                <div class="item-details"><div class="item-name">${r.name}</div></div>
+                <button onclick="socket.emit('accept_friend_request',{userId:currentUser.id,requesterId:'${r.id}'})" style="background:var(--bg-main-sky); color:white; border:none; padding:6px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">Đồng ý</button>
+            </div>`;
+        });
 
         const fBox = document.getElementById("friendList");
-        fBox.innerHTML = (!friends || friends.length === 0) ? '<p style="font-size:12px; color:var(--text-sub); padding:10px;">Chưa có bạn bè</p>' : '';
-        if(friends) {
-            friends.forEach(f => {
-                fBox.innerHTML += `<div class="item-row"><div class="item-avatar online">${f.name.charAt(0).toUpperCase()}</div><div class="item-details"><div class="item-name">${f.name}</div></div></div>`;
-            });
-        }
+        fBox.innerHTML = friends.length === 0 ? '<p style="font-size:12px; color:var(--text-sub); padding:10px;">Chưa có bạn bè</p>' : '';
+        friends.forEach(f => {
+            fBox.innerHTML += `<div class="item-row"><div class="item-avatar online">${f.name.charAt(0).toUpperCase()}</div><div class="item-details"><div class="item-name">${f.name}</div></div></div>`;
+        });
     });
 
     async function createNewRoom() {
@@ -435,7 +427,7 @@
         const checkboxes = document.querySelectorAll('.user-cb:checked');
         let members = []; checkboxes.forEach(cb => members.push(cb.value));
         if(members.length === 0) return alert("Vui lòng chọn thành viên!");
-        await fetch('/api/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ roomName, type, creatorId: currentUser.id, members }) });
+        await fetch('http://localhost:5000/api/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ roomName, type, creatorId: currentUser.id, members }) });
         document.getElementById("roomNameInput").value = ""; checkboxes.forEach(cb => cb.checked = false);
     }
 
@@ -447,9 +439,7 @@
         document.getElementById("chatHeaderAvatar").innerText = roomName.charAt(0).toUpperCase();
         
         document.querySelectorAll('.room-item').forEach(el => el.classList.remove('active-room'));
-        const activeItem = document.getElementById(roomId);
-        if(activeItem) activeItem.classList.add('active-room');
-        
+        document.getElementById(roomId).classList.add('active-room');
         socket.emit('join_room', { userId: currentUser.id, roomId });
     }
 
@@ -464,27 +454,20 @@
     
     socket.on('update_user_list', (users) => {
         const box = document.getElementById("userCheckboxList"); box.innerHTML = "";
-        if(users) {
-            users.forEach(u => { if(u.id !== currentUser.id) box.innerHTML += `<label style="display:flex; align-items:center; gap:6px; margin:2px 0;"><input type='checkbox' class='user-cb' value='${u.id}'> ${u.name}</label>`; });
-        }
+        users.forEach(u => { if(u.id !== currentUser.id) box.innerHTML += `<label style="display:flex; align-items:center; gap:6px; margin:2px 0;"><input type='checkbox' class='user-cb' value='${u.id}'> ${u.name}</label>`; });
     });
 
     socket.on('update_room_list', (rooms) => {
         const box = document.getElementById("roomList"); box.innerHTML = "";
-        if(rooms) {
-            rooms.forEach(r => {
-                if(r.members && r.members.includes(currentUser.id)) {
-                    box.innerHTML += `<div class="item-row room-item" id="${r.id}" onclick="selectRoom('${r.id}', '${r.name}', '${r.type}')">
-                        <div class="item-avatar" style="background:#e2e8f0; color:#475569;">${r.name.charAt(0).toUpperCase()}</div>
-                        <div class="item-details"><div class="item-name">${r.name}</div><div class="item-preview">Bấm để trò chuyện</div></div>
-                    </div>`;
-                    if(currentRoomId === r.id) {
-                        const targetEl = document.getElementById(r.id);
-                        if(targetEl) targetEl.classList.add('active-room');
-                    }
-                }
-            });
-        }
+        rooms.forEach(r => {
+            if(r.members.includes(currentUser.id)) {
+                box.innerHTML += `<div class="item-row room-item" id="${r.id}" onclick="selectRoom('${r.id}', '${r.name}', '${r.type}')">
+                    <div class="item-avatar" style="background:#e2e8f0; color:#475569;">${r.name.charAt(0).toUpperCase()}</div>
+                    <div class="item-details"><div class="item-name">${r.name}</div><div class="item-preview">Bấm để trò chuyện</div></div>
+                </div>`;
+                if(currentRoomId === r.id) document.getElementById(r.id).classList.add('active-room');
+            }
+        });
     });
 
     socket.on('receive_message', (data) => {
@@ -506,7 +489,7 @@
                 <div class="msg-content-wrapper">
                     ${isMyMsg ? '' : '<span class="msg-sender">' + data.senderName + '</span>'}
                     ${messageBodyHTML}
-                    <span class="msg-time">${data.time || ''}</span>
+                    <span class="msg-time">${data.time}</span>
                 </div>
             </div>
         `;

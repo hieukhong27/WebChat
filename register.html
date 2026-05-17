@@ -35,13 +35,15 @@
         <button onclick="handleRegister()">Đăng ký</button>
         
         <div class="auth-toggle-text">
-            Đã có tài khoản? <a href="/">Đăng nhập</a>
+            Đã có tài khoản? <a href="login.html">Đăng nhập</a>
         </div>
         
         <div class="auth-status-msg" id="authStatusMsg"></div>
     </div>
 
 <script>
+    // ĐÃ LOẠI BỎ: Dòng nhúng io() và connect_error gây lỗi hiển thị sai
+
     async function handleRegister() {
         const name = document.getElementById("authName").value.trim();
         const username = document.getElementById("authUsername").value.trim();
@@ -55,8 +57,7 @@
         }
 
         try {
-            // ĐÃ SỬA: Thay thế IP tĩnh sang API tương đối để tự nhận link Vercel hiện tại
-            const response = await fetch('/api/register', {
+            const response = await fetch('http://172.16.14.136:5000/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, username, password })
@@ -67,9 +68,10 @@
                 statusBox.innerText = data.error;
             } else {
                 alert("Đăng ký thành công! Chuyển đến trang đăng nhập.");
-                window.location.href = "/"; // ĐÃ SỬA: Chuyển hướng theo router của server
+                window.location.href = "login.html"; // Chuyển hướng sang file login.html kế bên
             }
         } catch (err) {
+            // Lỗi này chỉ xuất hiện khi bạn chưa chạy server backend thực tế
             statusBox.innerText = "Không thể kết nối tới máy chủ backend (Node.js).";
         }
     }

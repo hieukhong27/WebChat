@@ -3,50 +3,17 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const path = require('path'); 
 
 const app = express();
-
-// 🔴 SỬA LỖI CORS: Cho phép nhận request từ mọi nguồn (hoặc điền chính xác domain vercel của bạn)
-app.use(cors({
-    origin: "*",
-    methods: ["GET", "POST"],
-    credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 
-// 📁 Phục vụ file giao diện tĩnh trực tiếp từ thư mục hiện tại
-app.use(express.static(path.join(__dirname, '../')));
-
-// ==========================================
-// CẤU HÌNH ĐỊNH TUYẾN GIAO DIỆN CHUYỂN TRANG (ROUTING)
-// ==========================================
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../login.html'));
-});
-
-app.get('/register', (req, res) => {
-    res.sendFile(path.join(__dirname, '../register.html'));
-});
-
-app.get('/index', (req, res) => {
-    res.sendFile(path.join(__dirname, '../index.html'));
-});
-
 const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
-// Cấu hình Socket.io để chạy mượt mà không bị nghẽn CORS
-const io = new Server(server, { 
-    cors: { 
-        origin: "*",
-        methods: ["GET", "POST"]
-    } 
-});
-
-// 🍃 KẾT NỐI DATABASE MONGOOSE (Giữ nguyên của bạn)
-const MONGO_URI = process.env.MONGODB_URI || "mongodb+srv://hieuhieu27306_db_user:AcQJoWR8rUViXVk@webchat.ivx7oic.mongodb.net/zalo_clone_db?retryWrites=true&w=majority&appName=WebChat"; 
+const MONGO_URI = "mongodb://127.0.0.1:27017/zalo_clone_db"; 
 mongoose.connect(MONGO_URI)
-    .then(() => console.log("🍃 Đã kết nối MongoDB Atlas thành công!"))
+    .then(() => console.log("🍃 Đã kết nối MongoDB thành công!"))
     .catch(err => console.error("❌ Lỗi kết nối MongoDB:", err));
 
 // ==========================================
@@ -79,65 +46,6 @@ const messageSchema = new mongoose.Schema({
 const Message = mongoose.model('Message', messageSchema);
 
 // ==========================================
-// HÀM BỔ TRỢ PHÁT SỰ KIỆN ĐÚNG ĐỐI TƯỢNG (CHỐNG SPAM)
-// ==========================================
-async function sendUserListToSocket(socket) {
-    try {
-        const allUsers = await User.find({}, 'name username');
-        socket.emit('update_user_list', allUsers.map(u => ({ id: u._id, name: u.name, username: u.username })));
-    } catch (err) { console.error(err); }
-}
-
-async function broadcastRoomListUpdate(room) {
-    try {
-        const sockets = await io.fetchSockets();
-        const memberIdsStrings = room.members.map(m => m.toString());
-        
-        sockets.forEach(async (s) => {
-            if (s.userId && memberIdsStrings.includes(s.userId)) {
-                const myRooms = await Room.find({ members: s.userId });
-                s.emit('update_room_list', myRooms.map(r => ({
-                    id: r._id, name: r.name, type: r.type,
-                    members: r.members.map(m => m.toString()),
-                    adminId: r.adminId.toString()
-                })));
-            }
-        });
-    } catch (err) { console.error(err); }
-}
-
-async function sendMyRoomList(socket, userId) {
-    try {
-        const myRooms = await Room.find({ members: userId });
-        socket.emit('update_room_list', myRooms.map(r => ({
-            id: r._id, name: r.name, type: r.type,
-            members: r.members.map(m => m.toString()),
-            adminId: r.adminId.toString()
-        })));
-    } catch (err) { console.error(err); }
-}
-
-async function sendFriendData(userId) {
-    try {
-        const user = await User.findById(userId)
-            .populate('friends', 'name username')
-            .populate('friendRequests', 'name username');
-        
-        if (!user) return;
-
-        const sockets = await io.fetchSockets();
-        const userSocket = sockets.find(s => s.userId === userId.toString());
-        
-        if (userSocket) {
-            userSocket.emit('update_friend_data', {
-                friends: user.friends.map(f => ({ id: f._id, name: f.name, username: f.username })),
-                requests: user.friendRequests.map(r => ({ id: r._id, name: r.name, username: r.username }))
-            });
-        }
-    } catch (err) { console.error(err); }
-}
-
-// ==========================================
 // HTTP API XỬ LÝ ĐĂNG KÝ / ĐĂNG NHẬP / TẠO PHÒNG
 // ==========================================
 app.post('/api/register', async (req, res) => {
@@ -151,9 +59,7 @@ app.post('/api/register', async (req, res) => {
         const newUser = new User({ name, username, password });
         await newUser.save();
         
-        const allUsers = await User.find({}, 'name username');
-        io.emit('update_user_list', allUsers.map(u => ({ id: u._id, name: u.name, username: u.username })));
-
+        await broadcastUserList();
         res.json({ id: newUser._id, name: newUser.name, username: newUser.username });
     } catch (err) {
         res.status(500).json({ error: "Lỗi hệ thống đăng ký!" });
@@ -178,37 +84,72 @@ app.post('/api/rooms', async (req, res) => {
         const newRoom = new Room({ name: roomName || "Cuộc trò chuyện mới", type, members: allMembers, adminId: creatorId });
         await newRoom.save();
 
-        await broadcastRoomListUpdate(newRoom);
+        await broadcastRoomList();
         res.json(newRoom);
     } catch (err) {
         res.status(500).json({ error: "Lỗi tạo phòng!" });
     }
 });
 
+async function broadcastUserList() {
+    const allUsers = await User.find({}, 'name username');
+    io.emit('update_user_list', allUsers.map(u => ({ id: u._id, name: u.name, username: u.username })));
+}
+
+async function broadcastRoomList() {
+    const allRooms = await Room.find({});
+    io.emit('update_room_list', allRooms.map(r => ({
+        id: r._id, name: r.name, type: r.type,
+        members: r.members.map(m => m.toString()),
+        adminId: r.adminId.toString()
+    })));
+}
+
+async function sendFriendData(userId) {
+    try {
+        const user = await User.findById(userId)
+            .populate('friends', 'name username')
+            .populate('friendRequests', 'name username');
+        
+        if (!user) return;
+
+        const sockets = await io.fetchSockets();
+        const userSocket = sockets.find(s => s.userId === userId.toString());
+        
+        if (userSocket) {
+            userSocket.emit('update_friend_data', {
+                friends: user.friends.map(f => ({ id: f._id, name: f.name, username: f.username })),
+                requests: user.friendRequests.map(r => ({ id: r._id, name: r.name, username: r.username }))
+            });
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
 // ==========================================
 // SOCKET.IO REAL-TIME CHAT, KẾT BẠN & GỌI VIDEO
 // ==========================================
 io.on('connection', async (socket) => {
-    socket.on('init_user', async ({ userId }) => {
-        if (!userId) return;
-        socket.userId = userId;
-        
-        await sendUserListToSocket(socket);
-        await sendMyRoomList(socket, userId);
-        await sendFriendData(userId);
-    });
     
     socket.on('join_room', async ({ userId, roomId }) => {
-        if (!userId) return;
         socket.userId = userId;
+        
+        const dbUsers = await User.find({}, 'name username');
+        socket.emit('update_user_list', dbUsers.map(u => ({ id: u._id, name: u.name, username: u.username })));
+        
+        const dbRooms = await Room.find({});
+        socket.emit('update_room_list', dbRooms.map(r => ({
+            id: r._id, name: r.name, type: r.type,
+            members: r.members.map(m => m.toString()),
+            adminId: r.adminId.toString()
+        })));
+
+        await sendFriendData(userId);
 
         if (roomId) {
             const room = await Room.findById(roomId);
             if (room && room.members.includes(userId)) {
-                socket.rooms.forEach(roomName => {
-                    if(roomName !== socket.id) socket.leave(roomName);
-                });
-
                 socket.join(roomId);
                 
                 const oldMessages = await Message.find({ roomId }).sort({ _id: 1 });
@@ -220,6 +161,7 @@ io.on('connection', async (socket) => {
         }
     });
 
+    // --- SỰ KIỆN KẾT BẠN ---
     socket.on('send_friend_request', async ({ senderId, targetUsername }) => {
         try {
             const targetUser = await User.findOne({ username: targetUsername });
@@ -275,6 +217,7 @@ io.on('connection', async (socket) => {
         }
     });
 
+    // --- TIN NHẮN CHAT ---
     socket.on('send_message', async ({ roomId, messageText }) => {
         try {
             const room = await Room.findById(roomId);
@@ -299,37 +242,41 @@ io.on('connection', async (socket) => {
         }
     });
 
-    // --- WEBRTC SIGNALING ---
+    // =======================================================
+    // BIỂU DIỄN LOGIC TRUYỀN TÍN HIỆU CUỘC GỌI (WEBRTC SIGNALING)
+    // =======================================================
+
+    // 1. Khi User A nhấn nút Bắt đầu gọi thoại / gọi video
     socket.on('call_user', ({ targetRoomId, signalData, isVideo }) => {
+        // Gửi tín hiệu thông báo cuộc gọi đến cho tất cả các thành viên đang ở trong phòng (ngoại trừ người gọi)
         socket.to(targetRoomId).emit('incoming_call', {
             fromRoomId: targetRoomId,
             fromUserId: socket.userId,
-            signalData: signalData, 
+            signalData: signalData, // Mã hóa Offer cấu hình WebRTC từ máy A
             isVideo: isVideo
         });
     });
 
+    // 2. Khi User B bấm nút "Chấp nhận cuộc gọi"
     socket.on('accept_call', ({ targetRoomId, signalData }) => {
+        // Gửi lại mã hóa Answer phản hồi của máy B về cho máy A
         socket.to(targetRoomId).emit('call_accepted', { signalData });
     });
 
+    // 3. Khi User B bấm nút "Từ chối cuộc gọi"
     socket.on('reject_call', ({ targetRoomId }) => {
         socket.to(targetRoomId).emit('call_rejected');
     });
 
+    // 4. Liên tục trao đổi địa chỉ IP và cấu hình mạng (ICE Candidate) giữa 2 máy để thông luồng P2P
     socket.on('ice_candidate', ({ targetRoomId, candidate }) => {
         socket.to(targetRoomId).emit('ice_candidate', { candidate });
     });
 
+    // 5. Khi một trong hai bên ấn nút "Cúp máy" (End Call)
     socket.on('end_call', ({ targetRoomId }) => {
         socket.to(targetRoomId).emit('call_ended');
     });
 });
 
-// ĐỂ TƯƠNG THÍCH VỚI VERCEL SERVERLESS HÃY THÊM DÒNG NÀY:
-module.exports = server;
-
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-    console.log(`🚀 Server đang chạy tại cổng: ${PORT}`);
-});
+server.listen(5000, () => console.log("🚀 Server Zalo Full (Chat, Bạn bè, Call Video) chạy tại cổng 5000"));

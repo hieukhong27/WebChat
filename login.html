@@ -35,15 +35,14 @@
         <button onclick="handleLogin()">Đăng nhập</button>
         
         <div class="auth-toggle-text">
-            Chưa có tài khoản? <a href="/register">Đăng ký ngay</a>
+            Chưa có tài khoản? <a href="register.html">Đăng ký ngay</a>
         </div>
         
         <div class="auth-status-msg" id="authStatusMsg"></div>
     </div>
 
 <script>
-    // ĐÃ SỬA: Để trống io() để tự động nhận diện domain Vercel đang chạy thực tế
-    const socket = io();
+    const socket = io("http://localhost:5000");
     
     socket.on('connect_error', () => {
         document.getElementById("authStatusMsg").innerText = "Không thể kết nối tới máy chủ.";
@@ -61,8 +60,7 @@
         }
 
         try {
-            // ĐÃ SỬA: Bỏ localhost, dùng đường dẫn tương đối /api/login
-            const response = await fetch('/api/login', {
+            const response = await fetch('http://localhost:5000/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
@@ -74,9 +72,8 @@
             } else {
                 // Lưu dữ liệu đăng nhập vào localStorage của trình duyệt
                 localStorage.setItem("chat_current_user", JSON.stringify(data));
-                
-                // ĐÃ SỬA: Chuyển hướng theo định tuyến /index của server Vercel
-                window.location.href = "/index";
+                // Chuyển hướng sang trang chat chính
+                window.location.href = "index.html";
             }
         } catch (err) {
             statusBox.innerText = "Không thể kết nối tới máy chủ.";
