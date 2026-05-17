@@ -6,31 +6,44 @@ const mongoose = require('mongoose');
 const path = require('path'); 
 
 const app = express();
-app.use(cors());
+
+// 🔴 SỬA LỖI CORS: Cho phép nhận request từ mọi nguồn (hoặc điền chính xác domain vercel của bạn)
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST"],
+    credentials: true
+}));
 app.use(express.json());
 
-// 📁 CHUẨN HÓA VERCEL: Phục vụ file giao diện tĩnh trực tiếp từ thư mục gốc đám mây
-app.use(express.static(__dirname));
+// 📁 Phục vụ file giao diện tĩnh trực tiếp từ thư mục hiện tại
+app.use(express.static(path.join(__dirname, '../')));
 
 // ==========================================
 // CẤU HÌNH ĐỊNH TUYẾN GIAO DIỆN CHUYỂN TRANG (ROUTING)
 // ==========================================
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'login.html'));
+    res.sendFile(path.join(__dirname, '../login.html'));
 });
 
 app.get('/register', (req, res) => {
-    res.sendFile(path.join(__dirname, 'register.html'));
+    res.sendFile(path.join(__dirname, '../register.html'));
 });
 
 app.get('/index', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, '../index.html'));
 });
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
 
-// 🍃 KẾT NỐI DATABASE MONGOOSE
+// Cấu hình Socket.io để chạy mượt mà không bị nghẽn CORS
+const io = new Server(server, { 
+    cors: { 
+        origin: "*",
+        methods: ["GET", "POST"]
+    } 
+});
+
+// 🍃 KẾT NỐI DATABASE MONGOOSE (Giữ nguyên của bạn)
 const MONGO_URI = process.env.MONGODB_URI || "mongodb+srv://hieuhieu27306_db_user:AcQJoWR8rUViXVk@webchat.ivx7oic.mongodb.net/zalo_clone_db?retryWrites=true&w=majority&appName=WebChat"; 
 mongoose.connect(MONGO_URI)
     .then(() => console.log("🍃 Đã kết nối MongoDB Atlas thành công!"))
@@ -68,8 +81,6 @@ const Message = mongoose.model('Message', messageSchema);
 // ==========================================
 // HÀM BỔ TRỢ PHÁT SỰ KIỆN ĐÚNG ĐỐI TƯỢNG (CHỐNG SPAM)
 // ==========================================
-
-// Gửi danh sách user cho riêng 1 socket cụ thể khi cần
 async function sendUserListToSocket(socket) {
     try {
         const allUsers = await User.find({}, 'name username');
@@ -77,16 +88,13 @@ async function sendUserListToSocket(socket) {
     } catch (err) { console.error(err); }
 }
 
-// Cải tiến tối ưu: Chỉ gửi danh sách phòng cho những thành viên NẰM TRONG PHÒNG đó
 async function broadcastRoomListUpdate(room) {
     try {
         const sockets = await io.fetchSockets();
         const memberIdsStrings = room.members.map(m => m.toString());
         
-        // Chỉ duyệt qua những người dùng thực sự thuộc phòng vừa thay đổi/tạo mới
         sockets.forEach(async (s) => {
             if (s.userId && memberIdsStrings.includes(s.userId)) {
-                // Lấy lại toàn bộ danh sách phòng mà cá nhân user này tham gia
                 const myRooms = await Room.find({ members: s.userId });
                 s.emit('update_room_list', myRooms.map(r => ({
                     id: r._id, name: r.name, type: r.type,
@@ -98,7 +106,6 @@ async function broadcastRoomListUpdate(room) {
     } catch (err) { console.error(err); }
 }
 
-// Hàm gửi dữ liệu phòng ban đầu khi User vừa tải trang
 async function sendMyRoomList(socket, userId) {
     try {
         const myRooms = await Room.find({ members: userId });
@@ -144,7 +151,6 @@ app.post('/api/register', async (req, res) => {
         const newUser = new User({ name, username, password });
         await newUser.save();
         
-        // Khi có người mới, cập nhật cho toàn server biết để có trong list checkbox kết bạn/tạo nhóm
         const allUsers = await User.find({}, 'name username');
         io.emit('update_user_list', allUsers.map(u => ({ id: u._id, name: u.name, username: u.username })));
 
@@ -172,7 +178,6 @@ app.post('/api/rooms', async (req, res) => {
         const newRoom = new Room({ name: roomName || "Cuộc trò chuyện mới", type, members: allMembers, adminId: creatorId });
         await newRoom.save();
 
-        // ĐÚNG LOGIC: Chỉ gửi cập nhật phòng này cho những người liên quan, không phát bừa bãi
         await broadcastRoomListUpdate(newRoom);
         res.json(newRoom);
     } catch (err) {
@@ -184,19 +189,15 @@ app.post('/api/rooms', async (req, res) => {
 // SOCKET.IO REAL-TIME CHAT, KẾT BẠN & GỌI VIDEO
 // ==========================================
 io.on('connection', async (socket) => {
-    
-    // SỰ KIỆN 1: Khởi tạo dữ liệu ban đầu cho một cá nhân khi vừa đăng nhập/f5
     socket.on('init_user', async ({ userId }) => {
         if (!userId) return;
         socket.userId = userId;
         
-        // Chỉ gửi đích danh cho đúng socket này duy nhất một lần ban đầu
         await sendUserListToSocket(socket);
         await sendMyRoomList(socket, userId);
         await sendFriendData(userId);
     });
     
-    // SỰ KIỆN 2: Vào phòng chat (Chỉ lo nạp tin nhắn cũ, không spam dữ liệu danh sách)
     socket.on('join_room', async ({ userId, roomId }) => {
         if (!userId) return;
         socket.userId = userId;
@@ -204,14 +205,12 @@ io.on('connection', async (socket) => {
         if (roomId) {
             const room = await Room.findById(roomId);
             if (room && room.members.includes(userId)) {
-                // Thoát khỏi toàn bộ room cũ trước khi join room mới để tránh loãng tin nhắn
                 socket.rooms.forEach(roomName => {
                     if(roomName !== socket.id) socket.leave(roomName);
                 });
 
                 socket.join(roomId);
                 
-                // Trả về luồng hội thoại cũ
                 const oldMessages = await Message.find({ roomId }).sort({ _id: 1 });
                 socket.emit('clear_chat_screen');
                 oldMessages.forEach(msg => {
@@ -327,8 +326,10 @@ io.on('connection', async (socket) => {
     });
 });
 
-// 🌐 PORT CẤU HÌNH VERCEL
+// ĐỂ TƯƠNG THÍCH VỚI VERCEL SERVERLESS HÃY THÊM DÒNG NÀY:
+module.exports = server;
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-    console.log(`🚀 Server Zalo đang vận hành ổn định tại cổng: ${PORT}`);
+    console.log(`🚀 Server đang chạy tại cổng: ${PORT}`);
 });
